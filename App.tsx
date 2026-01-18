@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Search, User, Briefcase, GraduationCap, Github, Linkedin, ExternalLink, Activity, Terminal, Trophy, Mail } from 'lucide-react';
 import { Profile, Project } from './types';
 
@@ -50,33 +50,41 @@ const ACHIEVEMENTS = [
 
 const App: React.FC = () => {
   const [profile, setProfile] = useState<Profile>(INITIAL_PROFILE);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [activeTab, setActiveTab] = useState<'profile' | 'projects' | 'api-logs'>('profile');
   const [logs, setLogs] = useState<string[]>([]);
 
-  const logApiCall = (method: string, endpoint: string) => {
+  const logApiCall = useCallback((method: string, endpoint: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setLogs(prev => [`[${timestamp}] ${method} ${endpoint}`, ...prev].slice(0, 10));
+  }, []);
+
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setAppliedSearch(searchInput);
+    if (activeTab !== 'projects') {
+      setActiveTab('projects');
+    }
+    logApiCall('GET', `/projects?q=${searchInput}`);
   };
 
   const filteredProjects = useMemo(() => {
-    if (!searchQuery) return profile.projects;
-    logApiCall('GET', `/projects?q=${searchQuery}`);
-    const q = searchQuery.toLowerCase();
+    if (!appliedSearch) return profile.projects;
+    const q = appliedSearch.toLowerCase();
     return profile.projects.filter(p => 
       p.title.toLowerCase().includes(q) || 
       p.skills.some(s => s.toLowerCase().includes(q))
     );
-  }, [searchQuery, profile.projects]);
+  }, [appliedSearch, profile.projects]);
 
   const topSkills = useMemo(() => {
-    logApiCall('GET', '/skills/top');
     return profile.skills.slice(0, 6);
   }, [profile.skills]);
 
   useEffect(() => {
     logApiCall('GET', '/health');
-  }, []);
+  }, [logApiCall]);
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row font-sans">
@@ -126,22 +134,30 @@ const App: React.FC = () => {
       {/* Main Content Area */}
       <main className="flex-1 bg-slate-50 overflow-y-auto">
         <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 p-4 sticky top-0 z-10">
-          <div className="max-w-4xl mx-auto flex items-center space-x-4">
+          <form onSubmit={handleSearchSubmit} className="max-w-4xl mx-auto flex items-center space-x-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <button type="submit" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition">
+                <Search size={18} />
+              </button>
               <input 
                 type="text" 
                 placeholder="Query projects by tech stack..." 
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-100/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition outline-none"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
               />
             </div>
-            <div className="flex items-center space-x-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-tight">
+            <button 
+              type="submit"
+              className="hidden md:block px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 active:scale-95"
+            >
+              Search
+            </button>
+            <div className="flex items-center space-x-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-tight whitespace-nowrap">
               <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
               <span>v2.5.0-STABLE</span>
             </div>
-          </div>
+          </form>
         </header>
 
         <div className="p-6 md:p-10 max-w-4xl mx-auto">
@@ -159,9 +175,9 @@ const App: React.FC = () => {
                       <a href={`mailto:${profile.email}`} className="hover:text-indigo-600 transition underline decoration-indigo-200 underline-offset-4">{profile.email}</a>
                     </div>
                     <div className="flex space-x-3 mt-8">
-                      <a href={profile.links.github} target="_blank" className="p-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition shadow-lg shadow-slate-200"><Github size={20}/></a>
-                      <a href={profile.links.linkedin} target="_blank" className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200"><Linkedin size={20}/></a>
-                      <a href={profile.links.portfolio} target="_blank" className="p-3 bg-white text-slate-900 border border-slate-200 rounded-xl hover:bg-slate-50 transition shadow-sm"><ExternalLink size={20}/></a>
+                      <a href={profile.links.github} target="_blank" rel="noopener noreferrer" className="p-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition shadow-lg shadow-slate-200"><Github size={20}/></a>
+                      <a href={profile.links.linkedin} target="_blank" rel="noopener noreferrer" className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200"><Linkedin size={20}/></a>
+                      <a href={profile.links.portfolio} target="_blank" rel="noopener noreferrer" className="p-3 bg-white text-slate-900 border border-slate-200 rounded-xl hover:bg-slate-50 transition shadow-sm"><ExternalLink size={20}/></a>
                     </div>
                   </div>
                   <div className="w-full md:w-72 p-6 bg-gradient-to-br from-indigo-50 to-white rounded-2xl border border-indigo-100 shadow-inner">
@@ -229,7 +245,9 @@ const App: React.FC = () => {
               <div className="flex justify-between items-end">
                 <div>
                   <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Built Projects</h2>
-                  <p className="text-slate-500 mt-1">Full-stack & Frontend engineering results</p>
+                  <p className="text-slate-500 mt-1">
+                    {appliedSearch ? `Search results for "${appliedSearch}"` : 'Full-stack & Frontend engineering results'}
+                  </p>
                 </div>
                 <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold">{filteredProjects.length} Endpoints</span>
               </div>
@@ -241,7 +259,7 @@ const App: React.FC = () => {
                       <h3 className="text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition leading-tight">{project.title}</h3>
                       <div className="flex gap-2">
                         {project.links.map((link, idx) => (
-                          <a key={idx} href={link} target="_blank" className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition"><ExternalLink size={20} /></a>
+                          <a key={idx} href={link} target="_blank" rel="noopener noreferrer" className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition"><ExternalLink size={20} /></a>
                         ))}
                       </div>
                     </div>
@@ -266,6 +284,14 @@ const App: React.FC = () => {
                   </div>
                   <h3 className="text-xl font-bold text-slate-900">No matching projects</h3>
                   <p className="text-slate-500 mt-2 max-w-xs mx-auto">Try searching for core stacks like 'MERN', 'React', or 'Node'.</p>
+                  {appliedSearch && (
+                    <button 
+                      onClick={() => {setSearchInput(""); setAppliedSearch("");}} 
+                      className="mt-4 text-indigo-600 font-bold hover:underline"
+                    >
+                      Clear Search
+                    </button>
+                  )}
                 </div>
               )}
             </div>
