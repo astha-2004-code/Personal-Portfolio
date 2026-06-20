@@ -5,7 +5,7 @@ import { Profile, Project } from './types';
 
 const INITIAL_PROFILE: Profile = {
   name: "Astha Jha",
-  email: "asthajha0613@gmail.com",
+  email: "asthajha9717@gmail.com",
   education: "B.Tech in Electronics and Communication, NIT Delhi (CGPA: 7.15)",
   skills: ["C", "C++", "JavaScript", "Python", "HTML", "CSS", "React", "Node.js", "Express.js", "SQL", "MongoDB", "Git", "GitHub"],
   work: [
